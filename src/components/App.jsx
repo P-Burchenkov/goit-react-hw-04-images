@@ -46,7 +46,7 @@ export function App() {
 
         setImages(prevImg => [...prevImg, ...hits]);
         setIsloading(false);
-        setIsBtnVisible(page === [...images, ...hits].length / 12);
+        setIsBtnVisible(hits.length === 12);
       });
     } catch (error) {
       toast.warning(error.message);
