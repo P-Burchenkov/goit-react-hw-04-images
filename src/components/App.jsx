@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import SearchBar from './Searchbar';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -9,119 +9,97 @@ import ImageGallery from './ImageGallery';
 import Button from './Button';
 import Modal from './Modal';
 
-export class App extends Component {
-  state = {
-    query: null,
-    images: [],
-    isLoading: false,
-    page: 1,
-    isBtnVisible: false,
-    showModal: false,
-    largeImgUrl: null,
-    largeImgTag: null,
-  };
+export function App() {
+  const [query, setQuery] = useState('');
+  const [images, setImages] = useState([]);
+  const [isLoading, setIsloading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [isBtnVisible, setIsBtnVisible] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [largeImgUrl, setLargeImgUrl] = useState(null);
+  const [largeImgTag, setLargeImgTag] = useState(null);
 
-  componentDidUpdate(_, prevState) {
-    const { query, page } = this.state;
-
-    if (prevState.query !== query || prevState.page !== page) {
-      this.setState({
-        isLoading: true,
-      });
-      try {
-        fetchImage(query, page).then(({ hits }) => {
-          if (!hits.length) {
-            this.setState({ isLoading: false });
-            return toast.warning(`Ooops, there is no image with name ${query}`);
-          }
-
-          this.setState(prevState => ({
-            images: [...prevState.images, ...hits],
-            isLoading: false,
-            isBtnVisible:
-              this.state.page === [...prevState.images, ...hits].length / 12,
-          }));
-        });
-      } catch (error) {
-        toast.warning(error.message);
-        this.setState({ isLoading: false });
-      }
-    }
-  }
-
-  handleSubmitSearch = ({ query }, { resetForm }) => {
+  const handleSubmitSearch = ({ query }, { resetForm }) => {
     if (query.trim() === '') {
       return toast.warning('Please, enter something');
     }
 
-    this.setState({
-      query,
-      page: 1,
-      images: [],
-      isBtnVisible: false,
-    });
+    setQuery(query);
+    setPage(1);
+    setImages([]);
+    setIsBtnVisible(false);
+
     resetForm();
   };
 
-  onLoadMore = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
+  useEffect(() => {
+    if (!query) {
+      return;
+    }
+    setIsloading(true);
+    try {
+      fetchImage(query, page).then(({ hits }) => {
+        if (!hits.length) {
+          setIsloading(false);
+          return toast.warning(`Ooops, there is no image with name ${query}`);
+        }
+
+        setImages(prevImg => [...prevImg, ...hits]);
+        setIsloading(false);
+        setIsBtnVisible(page === [...images, ...hits].length / 12);
+      });
+    } catch (error) {
+      toast.warning(error.message);
+      setIsloading(false);
+    }
+  }, [query, page]);
+
+  const onLoadMore = () => {
+    setPage(prevPage => prevPage + 1);
   };
 
-  openModal = e => {
-    this.setState({
-      showModal: true,
-      largeImgUrl: e.currentTarget.dataset.largeimgurl,
-      largeImgTag: e.currentTarget.alt,
-    });
+  const openModal = e => {
+    setShowModal(true);
+    setLargeImgUrl(e.currentTarget.dataset.largeimgurl);
+    setLargeImgTag(e.currentTarget.alt);
   };
 
-  closeModal = () => {
-    this.setState({
-      showModal: false,
-      largeImgUrl: null,
-      largeImgTag: null,
-    });
+  const closeModal = () => {
+    setShowModal(false);
+    setLargeImgUrl(null);
+    setLargeImgTag(null);
   };
 
-  render() {
-    const { showModal, isBtnVisible, isLoading, images } = this.state;
-    return (
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr',
-          gridGap: '16px',
-          paddingBottom: '24px',
-        }}
-      >
-        <SearchBar onSubmit={this.handleSubmitSearch} />
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gridGap: '16px',
+        paddingBottom: '24px',
+      }}
+    >
+      <SearchBar onSubmit={handleSubmitSearch} />
 
-        <ImageGallery images={images} onClick={this.openModal} />
+      <ImageGallery images={images} onClick={openModal} />
 
-        {isBtnVisible && <Button onClick={this.onLoadMore} />}
+      {isBtnVisible && <Button onClick={onLoadMore} />}
 
-        {isLoading && (
-          <RotatingLines
-            strokeColor="grey"
-            strokeWidth="5"
-            animationDuration="0.75"
-            width="96"
-            visible={true}
-          />
-        )}
+      {isLoading && (
+        <RotatingLines
+          strokeColor="grey"
+          strokeWidth="5"
+          animationDuration="0.75"
+          width="96"
+          visible={true}
+        />
+      )}
 
-        {showModal && (
-          <Modal
-            url={this.state.largeImgUrl}
-            tags={this.state.largeImgTag}
-            onClose={this.closeModal}
-          />
-        )}
+      {showModal && (
+        <Modal url={largeImgUrl} tags={largeImgTag} onClose={closeModal} />
+      )}
 
-        <ToastContainer />
-      </div>
-    );
-  }
+      <ToastContainer />
+    </div>
+  );
 }
